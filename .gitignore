@@ -5,7 +5,6 @@ tests/__pycache__/*
 .gitattributes
 *.csv
 __pycache__
-__init__.py
 *.ini
 .ipynb_checkpoints
 *.pkl
