@@ -15,4 +15,4 @@ __init__.py
 .venv
 checkpoints
 .env
-data/
+data/*
