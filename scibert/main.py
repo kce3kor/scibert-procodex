@@ -124,12 +124,14 @@ def evaluation_pipeline(model, testdataloader, device, loss_fn):
 
 
 def training_pipeline(train_X, train_y, test_X, test_y, device):
+    # DATASETS
     trainInput, trainMask, trainLabel = generate_inputs(train_X, train_y)
     traindataset = TensorDataset(trainInput, trainMask, trainLabel)
 
     testInput, testMask, testLabel = generate_inputs(test_X, test_y)
     testdataset = TensorDataset(testInput, testMask, testLabel)
 
+    # DATALOADERS
     traindataloader = DataLoader(
         traindataset,
         sampler=RandomSampler(traindataset),
@@ -142,9 +144,11 @@ def training_pipeline(train_X, train_y, test_X, test_y, device):
         batch_size=BATCH_SIZE,
     )
 
+    # MODEL DEFINITION
     model = MODELS[MODEL]["model"]
     model = model.to(device)
 
+    # OPTIMIZERS AND SCHEDULERS
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
     loss_fn = torch.nn.CrossEntropyLoss()
 
@@ -156,6 +160,10 @@ def training_pipeline(train_X, train_y, test_X, test_y, device):
         num_warmup_steps=0,
         num_training_steps=total_steps,
     )
+
+    # MODEL TRAINING
+
+    print(f"Training Started ... ")
 
     training_stats = {}
     # start training clock
