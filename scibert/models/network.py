@@ -8,11 +8,13 @@ class CustomBERTModel(torch.nn.Module):
         self.model = model
         self.hidden_dim = hidden_dim
         # set a linear layer to map the hidden states to the output space
-        self.linear = torch.nn.Linear(self.hidden_dim, 2)
+        self.linear1 = torch.nn.Linear(self.hidden_dim, 128)
+        self.linear2 = torch.nn.Linear(128, 64)
+        self.linear3 = torch.nn.Linear(64, 2)
         # set a dropout layer
         self.dropout = torch.nn.Dropout(0.3)
         # set a relu activation function
-        self.relu = torch.nn.ReLU()
+        self.tanh = torch.nn.Tanh()
 
         self.softmax = torch.nn.Softmax(dim=1)
 
@@ -26,15 +28,15 @@ class CustomBERTModel(torch.nn.Module):
         )
 
         # pass the last hidden state of the token `[CLS]` to the linear layer
-        x = self.linear(outputs[0][:, 0, :])
-
-        # pass the output of the linear layer to the relu activation function
-        x = self.relu(x)
-
-        # pass the output of the relu activation function to the dropout layer
+        x = self.linear1(outputs[0][:, 0, :])
+        x = self.tanh(x)
         x = self.dropout(x)
 
-        # set a sigmoid layer
+        x = self.linear2(x)
+        x = self.tanh(x)
+        x = self.dropout(x)
+
+        x = self.linear3(x)
         x = torch.sigmoid(x)
 
         x = self.softmax(x)

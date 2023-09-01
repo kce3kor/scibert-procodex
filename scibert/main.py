@@ -31,6 +31,12 @@ def initialize(seed):
     torch.backends.cudnn.derterministic = True
     torch.cuda.manual_seed_all(seed)
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    print(device)
+
+    return device
+
 
 def generate_inputs(X, y):
     input_ids = []
@@ -79,11 +85,45 @@ def flat_accuracy(preds, labels):
     return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
 
-def train(train_X, train_y, test_X, test_y):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def evaluation_pipeline(model, testdataloader, device, loss_fn):
+    ## MODEL EVALUATION
 
-    print(device)
+    model.eval()
 
+    total_eval_accuracy = 0
+    total_eval_loss = 0
+    predictions, true_labels = [], []
+
+    with torch.no_grad():
+        for _, batch in enumerate(testdataloader):
+            input_ids = batch[0]
+            attention_masks = batch[1]
+            labels = batch[2]
+
+            input_ids = input_ids.to(device)
+            attention_masks = attention_masks.to(device)
+            labels = labels.to(device)
+
+            logits = model(
+                input_ids,  # set a sigmoid layer
+                attention_masks,
+            )
+
+            loss = loss_fn(logits, labels)
+            total_eval_loss += loss.item()
+
+            logits = logits.detach().cpu().numpy()
+            label_ids = labels.to("cpu").numpy()
+
+            total_eval_accuracy += flat_accuracy(logits, label_ids)
+
+            predictions.extend(np.argmax(logits, axis=1).flatten().tolist())
+            true_labels.extend(np.argmax(label_ids, axis=1).flatten().tolist())
+
+    return total_eval_loss, total_eval_accuracy, true_labels, predictions
+
+
+def training_pipeline(train_X, train_y, test_X, test_y, device):
     trainInput, trainMask, trainLabel = generate_inputs(train_X, train_y)
     traindataset = TensorDataset(trainInput, trainMask, trainLabel)
 
@@ -164,58 +204,39 @@ def train(train_X, train_y, test_X, test_y):
 
         torch.save(model.state_dict(), Path(CKPTH_DIR, f"{MODEL}_{epoch}.pt"))
 
-        ## MODEL EVALUATION
+        ## EVALUATION PIPELINE
+        (
+            total_eval_loss,
+            total_eval_accuracy,
+            true_labels,
+            predictions,
+        ) = evaluation_pipeline(model, testdataloader, device, loss_fn)
 
-        model.eval()
-
-        total_eval_accuracy = 0
-        total_eval_loss = 0
-        predictions, true_labels = [], []
-
-        with torch.no_grad():
-            for _, batch in enumerate(testdataloader):
-                input_ids = batch[0]
-                attention_masks = batch[1]
-                labels = batch[2]
-
-                input_ids = input_ids.to(device)
-                attention_masks = attention_masks.to(device)
-                labels = labels.to(device)
-
-                logits = model(
-                    input_ids,
-                    attention_masks,
-                )
-
-                loss = loss_fn(logits, labels)
-
-                logits = logits.detach().cpu().numpy()
-                label_ids = labels.to("cpu").numpy()
-
-                predictions.extend(np.argmax(logits, axis=1).flatten().tolist())
-                true_labels.extend(np.argmax(label_ids, axis=1).flatten().tolist())
-
-            training_stats[epoch] = {
-                "Training Loss Per Epoch": total_train_loss,
-                "Average Training Loss": total_train_loss / len(traindataloader),
-                "Testing Loss Per Epoch": total_eval_loss,
-                "Average Test Loss PE": total_eval_loss / len(testdataloader),
-                "Average Test Accuracy PE": total_eval_accuracy / len(testdataloader),
-                "Training Time": format_time(time.time() - start_time),
-                "F1 Score": f1_score(true_labels, predictions),
-                "Confusion Matrix": confusion_matrix(true_labels, predictions),
-                "Accuracy (Sklearn)": accuracy_score(true_labels, predictions),
-            }
+        training_stats[epoch] = {
+            "Training Loss Per Epoch": total_train_loss,
+            "Average Training Loss": total_train_loss / len(traindataloader),
+            "Testing Loss Per Epoch": total_eval_loss,
+            "Average Test Loss PE": total_eval_loss / len(testdataloader),
+            "Average Test Accuracy PE": total_eval_accuracy / len(testdataloader),
+            "Training Time": format_time(time.time() - start_time),
+            "F1 Score": f1_score(true_labels, predictions),
+            "Confusion Matrix": confusion_matrix(true_labels, predictions),
+            "Accuracy (Sklearn)": accuracy_score(true_labels, predictions),
+        }
         print(training_stats)
 
     print("Training complete!")
 
 
-if __name__ == "__main__":
-    initialize(SEED)
+def main():
+    device = initialize(SEED)
 
     traindf, testdf = make(DATA, TEST_DIR)
 
-    train_X, train_y, test_X, test_y = build_features(traindf, testdf)
+    train_X, train_y, test_X, test_y = build_features(traindf[:-1], testdf[:-1])
 
-    train(train_X, train_y, test_X, test_y)
+    training_pipeline(train_X, train_y, test_X, test_y, device)
+
+
+if __name__ == "__main__":
+    main()
