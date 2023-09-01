@@ -99,10 +99,16 @@ python -m tests.test_environment
 
 ### To-do List
 
-- [ ] Download dataset
-- [ ] Pre-process data
-- [ ] Train model
-- [ ] Test model
-- [ ] Main Pipeline
+- [X] Download dataset
+- [X] Pre-process data
+- [X] Train model
+- [X] Test model
+- [X] Main Pipeline
+- [X] Inference Pipeline
+
+
+### Author
+
+[Kamal Shrestha](https://shresthakamal.com.np/)
 
 -------------------------------
