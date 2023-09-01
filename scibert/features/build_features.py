@@ -17,7 +17,7 @@ def combine_features(df):
     return X.values, y.values
 
 
-def build_features():
+def build_features(train, test):
     train_X, train_y = combine_features(train)
     test_X, test_y = combine_features(test)
 
