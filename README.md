@@ -15,50 +15,51 @@ Project Organization
 ```
 ├── api
 │   ├── app.py
-│   ├── config
-│   │   └── config.py
+│   ├── config.py
 │   ├── resources
-│   ├── static
 │   └── templates
-│  
-├── checkpoints
-│  
-├── data
-│   ├── processed
-│   └── raw
-│  
+├── Dockerfile
 ├── docs
 │   ├── Analysis.md
-│   └── Requirements.md
-│  
+│   ├── banner.webp
+│   ├── DatasetDescription.md
+│   ├── references.md
+│   └── srs.md
+├── LICENSE
+├── logs
+├── Makefile
 ├── notebooks
-│ 
+│   └── playground.ipynb
+├── poetry.lock
+├── poetry.toml
+├── pyproject.toml
+├── README.md
+├── requirements.txt
+├── run.sh
 ├── scibert
-│   ├── config
-│   │   └── config.py
-│   ├── data
-│   │   └── make_dataset.py
-│   ├── dispatcher
+│   ├── config.py
 │   ├── features
 │   │   ├── build_features.py
+│   ├── inference.py
+│   ├── __init__.py
+│   ├── main.py
 │   ├── models
-│   │   ├── test_model.py
-│   │   └── train_model.py
-│   ├── utils
-│   ├── visualisation
-│   |   └── visualisation.py
-│   └── main.py
-│ 
-├── Dockerfile
-│ 
-├── run.sh
-├── logs
-├── references
-├── requirements.txt
-├── README.md
-├── LICENSE
+│   │   ├── dispatcher.py
+│   │   ├── __init__.py
+│   │   ├── network.py
+│   ├── preprocessing
+│   │   ├── __init__.py
+│   │   ├── make_data.py
+│   │   └── utils.py
+│   ├── runs
+│   └── utils
+│       ├── decorators.py
+│       ├── __init__.py
+│       ├── logger.py
+│       └── serializer.py
 └── tests
     └── test_environment.py
+
 ```
 --------
 
