@@ -6,13 +6,15 @@ MODELS = {
         "model": CustomBERTModel(
             AutoModel.from_pretrained(
                 "allenai/scibert_scivocab_uncased", output_hidden_states=True
-            )
+            ),
+            hidden_dim=128,
         ),
         "tokenizer": AutoTokenizer.from_pretrained("allenai/scibert_scivocab_uncased"),
     },
     "tinyBERT": {
         "model": CustomBERTModel(
-            AutoModel.from_pretrained("prajjwal1/bert-tiny", output_hidden_states=True)
+            AutoModel.from_pretrained("prajjwal1/bert-tiny", output_hidden_states=True),
+            hidden_dim=128,
         ),
         "tokenizer": AutoTokenizer.from_pretrained("prajjwal1/bert-tiny"),
     },

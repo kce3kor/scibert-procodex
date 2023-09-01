@@ -2,12 +2,13 @@ import torch
 
 
 class CustomBERTModel(torch.nn.Module):
-    def __init__(self, model):
+    def __init__(self, model, hidden_dim):
         super(CustomBERTModel, self).__init__()
 
         self.model = model
+        self.hidden_dim = hidden_dim
         # set a linear layer to map the hidden states to the output space
-        self.linear = torch.nn.Linear(768, 2)
+        self.linear = torch.nn.Linear(self.hidden_dim, 2)
         # set a dropout layer
         self.dropout = torch.nn.Dropout(0.3)
         # set a relu activation function

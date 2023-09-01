@@ -1,9 +1,12 @@
 import torch
-import random, time
+import numpy as np
+import random, time, datetime
 from tqdm import tqdm
 from pathlib import Path
 from transformers import get_scheduler
 from torch.utils.data import DataLoader, RandomSampler, TensorDataset
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
+
 
 from scibert.preprocessing.make_data import make
 
@@ -63,7 +66,24 @@ def generate_inputs(X, y):
     return input_ids, attention_masks, targets
 
 
+# define format_time function
+def format_time(elapsed):
+    elapsed_rounded = int(round((elapsed)))
+    return str(datetime.timedelta(seconds=elapsed_rounded))
+
+
+# define flat_accuracy function
+def flat_accuracy(preds, labels):
+    pred_flat = np.argmax(preds, axis=1).flatten()
+    labels_flat = np.argmax(labels, axis=1).flatten()
+    return np.sum(pred_flat == labels_flat) / len(labels_flat)
+
+
 def train(train_X, train_y, test_X, test_y):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    print(device)
+
     trainInput, trainMask, trainLabel = generate_inputs(train_X, train_y)
     traindataset = TensorDataset(trainInput, trainMask, trainLabel)
 
@@ -83,6 +103,7 @@ def train(train_X, train_y, test_X, test_y):
     )
 
     model = MODELS[MODEL]["model"]
+    model = model.to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -108,12 +129,16 @@ def train(train_X, train_y, test_X, test_y):
         print(f"Epoch {epoch + 1}/{EPOCHS}")
         print("-" * 10)
 
-        total_loss = 0
+        total_train_loss = 0
 
         for step, batch in enumerate(traindataloader):
             input_ids = batch[0]
             attention_masks = batch[1]
             labels = batch[2]
+
+            input_ids = input_ids.to(device)
+            attention_masks = attention_masks.to(device)
+            labels = labels.to(device)
 
             logits = model(
                 input_ids,
@@ -122,7 +147,7 @@ def train(train_X, train_y, test_X, test_y):
 
             loss = loss_fn(logits, labels)
 
-            total_loss += loss.item()
+            total_train_loss += loss.item()
 
             optimizer.zero_grad()
 
@@ -137,10 +162,53 @@ def train(train_X, train_y, test_X, test_y):
             if step % 1 == 0:
                 print(f"Loss at step {step}: {loss.item()}")
 
-    avg_train_loss = total_loss / len(traindataloader)
-    print(f"Average training loss: {avg_train_loss}")
+        torch.save(model.state_dict(), Path(CKPTH_DIR, f"{MODEL}_{epoch}.pt"))
 
-    torch.save(model.state_dict(), Path(CKPTH_DIR, f"{MODEL}_{epoch}.pt"))
+        ## MODEL EVALUATION
+
+        model.eval()
+
+        total_eval_accuracy = 0
+        total_eval_loss = 0
+        predictions, true_labels = [], []
+
+        with torch.no_grad():
+            for _, batch in enumerate(testdataloader):
+                input_ids = batch[0]
+                attention_masks = batch[1]
+                labels = batch[2]
+
+                input_ids = input_ids.to(device)
+                attention_masks = attention_masks.to(device)
+                labels = labels.to(device)
+
+                logits = model(
+                    input_ids,
+                    attention_masks,
+                )
+
+                loss = loss_fn(logits, labels)
+
+                logits = logits.detach().cpu().numpy()
+                label_ids = labels.to("cpu").numpy()
+
+                predictions.extend(np.argmax(logits, axis=1).flatten().tolist())
+                true_labels.extend(np.argmax(label_ids, axis=1).flatten().tolist())
+
+            training_stats[epoch] = {
+                "Training Loss Per Epoch": total_train_loss,
+                "Average Training Loss": total_train_loss / len(traindataloader),
+                "Testing Loss Per Epoch": total_eval_loss,
+                "Average Test Loss PE": total_eval_loss / len(testdataloader),
+                "Average Test Accuracy PE": total_eval_accuracy / len(testdataloader),
+                "Training Time": format_time(time.time() - start_time),
+                "F1 Score": f1_score(true_labels, predictions),
+                "Confusion Matrix": confusion_matrix(true_labels, predictions),
+                "Accuracy (Sklearn)": accuracy_score(true_labels, predictions),
+            }
+        print(training_stats)
+
+    print("Training complete!")
 
 
 if __name__ == "__main__":
@@ -148,6 +216,6 @@ if __name__ == "__main__":
 
     traindf, testdf = make(DATA, TEST_DIR)
 
-    train_X, train_y, test_X, test_y = build_features(traindf[:20], testdf[:20])
+    train_X, train_y, test_X, test_y = build_features(traindf, testdf)
 
     train(train_X, train_y, test_X, test_y)
