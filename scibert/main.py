@@ -1,6 +1,9 @@
 import torch
+import mlflow
 import numpy as np
-import random, time, datetime
+import random, os
+from dotenv import load_dotenv
+
 from tqdm import tqdm
 from pathlib import Path
 from transformers import get_scheduler, AutoModel
@@ -38,6 +41,7 @@ def initialize(seed: int) -> str:
 
     logger.info(f"Initializing development pipeline with SEED: {seed}")
 
+    load_dotenv()
     random.seed(seed)
     torch.manual_seed(seed)
     torch.backends.cudnn.derterministic = True
@@ -91,12 +95,6 @@ def generate_inputs(X: np.ndarray, y: np.ndarray) -> list:
     targets = torch.stack(targets, dim=0)
 
     return input_ids, attention_masks, targets
-
-
-def format_time(elapsed):
-    """Format elapsed time"""
-    elapsed_rounded = int(round((elapsed)))
-    return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
 def flat_accuracy(preds: np.ndarray, labels: np.ndarray) -> float:
@@ -226,13 +224,20 @@ def training_pipeline(
         num_training_steps=total_steps,
     )
 
+    mlflow.log_params(
+        {
+            "lr": LEARNING_RATE,
+            "batch_size": BATCH_SIZE,
+            "epochs": EPOCHS,
+            "tokens_max_length": TOKENS_MAX_LENGTH,
+            "model": MODEL,
+            "loss": loss_fn,
+        }
+    )
+
     # MODEL TRAINING
 
     logger.info(f"Training Started ... ")
-
-    training_stats = {}
-    # start training clock
-    start_time = time.time()
 
     model.train()
 
@@ -280,6 +285,7 @@ def training_pipeline(
 
         ## EVALUATION PIPELINE
         logger.info("Entering Evaluation pipeline")
+
         (
             total_eval_loss,
             total_eval_accuracy,
@@ -287,18 +293,26 @@ def training_pipeline(
             predictions,
         ) = evaluation_pipeline(model, testdataloader, device, loss_fn)
 
-        training_stats[epoch] = {
-            "Training Loss Per Epoch": total_train_loss,
-            "Average Training Loss": total_train_loss / len(traindataloader),
-            "Testing Loss Per Epoch": total_eval_loss,
-            "Average Test Loss PE": total_eval_loss / len(testdataloader),
-            "Average Test Accuracy PE": total_eval_accuracy / len(testdataloader),
-            "Training Time": format_time(time.time() - start_time),
-            "F1 Score": f1_score(true_labels, predictions),
-            "Confusion Matrix": confusion_matrix(true_labels, predictions),
-            "Accuracy (Sklearn)": accuracy_score(true_labels, predictions),
-        }
-        logger.info(f"Training Statistics: {training_stats}")
+        mlflow.log_metrics(
+            {
+                "Training Loss Per Epoch": total_train_loss,
+                "Average Training Loss": total_train_loss / len(traindataloader),
+                "Testing Loss Per Epoch": total_eval_loss,
+                "Average Test Loss PE": total_eval_loss / len(testdataloader),
+                "Average Test Accuracy PE": total_eval_accuracy / len(testdataloader),
+                "F1 Score": f1_score(true_labels, predictions),
+                "Accuracy Sklearn": accuracy_score(true_labels, predictions),
+            }
+        )
+        # mlflow.log_dict(
+        #     np.array(confusion_matrix(true_labels, predictions)).tolist(),
+        #     f"confusion_matrix_{epoch}.json",
+        # )
+        mlflow.pytorch.log_model(
+            pytorch_model=model,
+            artifact_path="model",
+            registered_model_name=f"finetune-tinyBERT",
+        )
 
     logger.info("Training complete!")
 
@@ -308,10 +322,29 @@ def main():
     device = initialize(SEED)
 
     traindf, testdf = make(DATA, TEST_DIR)
+    train_X, train_y, test_X, test_y = build_features(traindf[:20], testdf[:20])
 
-    train_X, train_y, test_X, test_y = build_features(traindf[:-1], testdf[:-1])
+    experiment_name = "finetune-tinyBERT"
 
-    training_pipeline(train_X, train_y, test_X, test_y, device)
+    try:
+        exp_id = mlflow.create_experiment(name=experiment_name)
+    except:
+        exp_id = mlflow.get_experiment_by_name(experiment_name).experiment_id
+
+    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
+
+    with mlflow.start_run(experiment_id=exp_id, run_name="Run1") as r:
+        mlflow.set_tags(
+            {
+                "Description": "Finetunning tinyBERT Model with procodex dataset",
+                "ProblemType": "Classification (Relevant, Not Relevant)",
+                "Model": MODEL,
+            }
+        )
+
+        training_pipeline(train_X, train_y, test_X, test_y, device)
+
+    mlflow.end_run()
 
 
 if __name__ == "__main__":

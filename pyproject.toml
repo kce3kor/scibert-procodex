@@ -23,6 +23,7 @@ pre-commit = "^3.3.3"
 notebook = "^7.0.3"
 pdoc = "^14.0.0"
 pytest = "^7.4.1"
+mlflow = "^2.6.0"
 
 [build-system]
 requires = ["poetry-core"]
