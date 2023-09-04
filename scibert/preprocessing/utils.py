@@ -6,10 +6,8 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 import os, requests
 from pathlib import Path
-import pandas as pd
-import warnings
 
-warnings.filterwarnings("ignore")
+from scibert.utils.logger import logger
 
 
 # 1. lower case
@@ -122,10 +120,10 @@ class DataFetcher:
                         os.fsync(f.fileno())
 
         except Exception as e:
-            print(f"[ERROR]: Download failed for file: {file['url']}::{e}")
+            logger.error(f"Download failed for file: {file['url']}::{e}")
 
     @timer
     def fetch(self):
         for file in self.files:
-            print(f"Downloading file: {file['filename']}")
+            logger.info(f"Downloading file: {file['filename']}")
             self.download(file)

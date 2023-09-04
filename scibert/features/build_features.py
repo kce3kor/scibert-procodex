@@ -1,5 +1,6 @@
 from scibert.preprocessing.make_data import make
 from scibert.config import DATA, TEST_DIR
+from scibert.utils.logger import logger
 
 
 def combine_features(df):
@@ -18,6 +19,9 @@ def combine_features(df):
 
 
 def build_features(train, test):
+    logger.info(
+        "Building features with each columns: String concatenation delimited with [SEP]"
+    )
     train_X, train_y = combine_features(train)
     test_X, test_y = combine_features(test)
 

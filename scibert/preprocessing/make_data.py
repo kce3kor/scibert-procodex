@@ -18,6 +18,7 @@ from scibert.preprocessing.utils import (
 )
 
 from scibert.config import DATA_DIR, LABEL_MAPPER
+from scibert.utils.logger import logger
 
 
 def process_target(label):
@@ -53,6 +54,7 @@ def process_content(text):
 
 
 def preprocess(df, preprocesses):
+    logger.info(f"Preprocessing Dataframe for each columns")
     for column, transform in tqdm(preprocesses.items()):
         df[column] = df[column].apply(transform)
 
@@ -61,6 +63,7 @@ def preprocess(df, preprocesses):
 
 def make(data_path, test_path):
     # LOAD ENVIRONMENT VARIABLES
+    logger.info(f"Loading environment variables")
     _ = load_dotenv()
 
     files = [
@@ -93,7 +96,7 @@ def make(data_path, test_path):
 
     test_ids = list(test["id"].values)
 
-    # FILTERING TRAIN AND TEST BASED ON THE TEST IDs
+    logger.info(f"Creating training and testing sets")
     train = pdata[~pdata["id"].isin(test_ids)]
     test = pdata[pdata["id"].isin(test_ids)]
 

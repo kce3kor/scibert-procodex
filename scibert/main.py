@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 
 
 from scibert.preprocessing.make_data import make
+from scibert.utils.logger import logger
 
 from scibert.config import (
     DATA,
@@ -26,6 +27,8 @@ from scibert.models.dispatcher import MODELS
 
 
 def initialize(seed):
+    logger.info(f"Initializing development pipeline with SEED: {seed}")
+
     random.seed(seed)
     torch.manual_seed(seed)
     torch.backends.cudnn.derterministic = True
@@ -33,7 +36,7 @@ def initialize(seed):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    print(device)
+    logger.info(f"Device: {device}")
 
     return device
 
@@ -124,10 +127,14 @@ def evaluation_pipeline(model, testdataloader, device, loss_fn):
 
 
 def training_pipeline(train_X, train_y, test_X, test_y, device):
+    logger.info("Entering training pipeline")
+
     # DATASETS
+    logger.info("Generating Training Inputs: train_x, train_y")
     trainInput, trainMask, trainLabel = generate_inputs(train_X, train_y)
     traindataset = TensorDataset(trainInput, trainMask, trainLabel)
 
+    logger.info("Generating Testing Inputs: test_x, test_y")
     testInput, testMask, testLabel = generate_inputs(test_X, test_y)
     testdataset = TensorDataset(testInput, testMask, testLabel)
 
@@ -145,6 +152,7 @@ def training_pipeline(train_X, train_y, test_X, test_y, device):
     )
 
     # MODEL DEFINITION
+    logger.info(f"Building {MODEL} Model")
     model = MODELS[MODEL]["model"]
     model = model.to(device)
 
@@ -163,7 +171,7 @@ def training_pipeline(train_X, train_y, test_X, test_y, device):
 
     # MODEL TRAINING
 
-    print(f"Training Started ... ")
+    logger.info(f"Training Started ... ")
 
     training_stats = {}
     # start training clock
@@ -174,8 +182,8 @@ def training_pipeline(train_X, train_y, test_X, test_y, device):
     model.zero_grad()
 
     for epoch in range(EPOCHS):
-        print(f"Epoch {epoch + 1}/{EPOCHS}")
-        print("-" * 10)
+        logger.info(f"Epoch {epoch + 1}/{EPOCHS}")
+        logger.info("-" * 10)
 
         total_train_loss = 0
 
@@ -207,12 +215,14 @@ def training_pipeline(train_X, train_y, test_X, test_y, device):
 
             scheduler.step()
 
-            if step % 1 == 0:
-                print(f"Loss at step {step}: {loss.item()}")
+            if step % 10 == 0:
+                logger.info(f"Loss at step {step}: {loss.item()}")
 
+        logger.info("Saving trained model instance per epoch")
         torch.save(model.state_dict(), Path(CKPTH_DIR, f"{MODEL}_{epoch}.pt"))
 
         ## EVALUATION PIPELINE
+        logger.info("Entering Evaluation pipeline")
         (
             total_eval_loss,
             total_eval_accuracy,
@@ -231,9 +241,9 @@ def training_pipeline(train_X, train_y, test_X, test_y, device):
             "Confusion Matrix": confusion_matrix(true_labels, predictions),
             "Accuracy (Sklearn)": accuracy_score(true_labels, predictions),
         }
-        print(training_stats)
+        logger.info(f"Training Statistics: {training_stats}")
 
-    print("Training complete!")
+    logger.info("Training complete!")
 
 
 def main():

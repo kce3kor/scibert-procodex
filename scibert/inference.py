@@ -10,10 +10,14 @@ from scibert.preprocessing.make_data import (
     process_keywords,
 )
 from scibert.models.dispatcher import MODELS
+from scibert.utils.logger import logger
+
 from scibert.config import MODEL, TOKENS_MAX_LENGTH, CKPTH_DIR, SEED, LABEL_MAPPER
 
 
-def initialize(seed=SEED):
+def initialize(seed):
+    logger.info(f"Initializing development pipeline with SEED: {seed}")
+
     random.seed(seed)
     torch.manual_seed(seed)
     torch.backends.cudnn.derterministic = True
@@ -21,12 +25,13 @@ def initialize(seed=SEED):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    print(device)
+    logger.info(f"Device: {device}")
 
     return device
 
 
 def load_model(ckpth):
+    logger.info("Loading saved model from: {ckpth}")
     model = MODELS[MODEL]["model"]
 
     model.load_state_dict(torch.load(ckpth))
@@ -39,7 +44,9 @@ def reverse_label_mapper(label):
 
 
 def inference(query):
-    device = initialize()
+    logger.info(f"Query: {query}")
+
+    device = initialize(SEED)
 
     query = {
         "title": process_title(query["title"]),
@@ -48,6 +55,7 @@ def inference(query):
     }
 
     input = query["title"] + "[SEP]" + query["keywords"] + "[SEP]" + query["content"]
+    logger.info(f"Model input: {input}")
 
     tokenizer = MODELS[MODEL]["tokenizer"]
 
@@ -64,6 +72,7 @@ def inference(query):
     model = load_model(Path(CKPTH_DIR, f"{MODEL}_{9}.pt"))
     model = model.to(device)
 
+    logger.info("Running model evaluation...")
     model.eval()
 
     with torch.no_grad():
@@ -71,7 +80,11 @@ def inference(query):
     logits = logits.detach().cpu().numpy()
 
     label = np.argmax(logits, axis=1)
-    return reverse_label_mapper(label)
+    prediction = reverse_label_mapper(label)
+
+    logger.info(f"Output: {logits, label, prediction}")
+
+    return prediction
 
 
 if __name__ == "__main__":
