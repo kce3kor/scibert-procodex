@@ -21,6 +21,7 @@ loguru = "^0.7.0"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.3.3"
 notebook = "^7.0.3"
+pdoc = "^14.0.0"
 
 [build-system]
 requires = ["poetry-core"]

@@ -21,18 +21,42 @@ from scibert.config import DATA_DIR, LABEL_MAPPER
 from scibert.utils.logger import logger
 
 
-def process_target(label):
+def process_target(label: str) -> int:
+    """Returns target labels mapped to int
+
+    Args:
+        label (str): Target in str
+
+    Returns:
+        int: Target in int
+    """
     return LABEL_MAPPER[label]
 
 
-def process_title(text):
+def process_title(text: str) -> str:
+    """Preprocessing Title Column in the Dataset
+
+    Args:
+        text (str): Title for all data rows
+
+    Returns:
+        str: processed title for each rows
+    """
     text = remove_punctuation(text)
     text = lemmatize(text)
     text = remove_extra_non_breaking_spaces(text)
     return text
 
 
-def process_keywords(text):
+def process_keywords(text: str) -> str:
+    """Preprocessing keywords in data
+
+    Args:
+        text (str): keywords from dataframe
+
+    Returns:
+        str: processed keywords for each data rows
+    """
     tokens = text.split(";")
     tokens = [remove_non_ascii(t) for t in tokens]
     tokens = [t.split("/") for t in tokens]
@@ -42,7 +66,15 @@ def process_keywords(text):
     return " ".join(tokens)
 
 
-def process_content(text):
+def process_content(text: str) -> str:
+    """Processed Content for each data rows
+
+    Args:
+        text (str): Raw Contents
+
+    Returns:
+        str: Processed Content for each rows
+    """
     x = text.replace("\n", " ")
     x = remove_urls(x)
     x = remove_non_ascii(x)
@@ -53,7 +85,16 @@ def process_content(text):
     return x
 
 
-def preprocess(df, preprocesses):
+def preprocess(df: pd.DataFrame, preprocesses: dict) -> pd.DataFrame:
+    """Preprocess each columns with respective processing functions
+
+    Args:
+        df (pd.DataFrame): Data
+        preprocesses (dict): Respective processing functions based on each columns
+
+    Returns:
+        pd.DataFrame: Processed Data
+    """
     logger.info(f"Preprocessing Dataframe for each columns")
     for column, transform in tqdm(preprocesses.items()):
         df[column] = df[column].apply(transform)
@@ -61,7 +102,19 @@ def preprocess(df, preprocesses):
     return df
 
 
-def make(data_path, test_path):
+def make(data_path: str, test_path: str) -> pd.DataFrame:
+    """Make processed train and test data based on raw dataframe of complete data and test ids
+
+    Args:
+        data_path (str): Path to original data
+        test_path (str): Path to test ids
+
+    Raises:
+        Exception: Raises missing column expection if the required columns are not there
+
+    Returns:
+        pd.DataFrame: train and test dataframe after preprocessing
+    """
     # LOAD ENVIRONMENT VARIABLES
     logger.info(f"Loading environment variables")
     _ = load_dotenv()

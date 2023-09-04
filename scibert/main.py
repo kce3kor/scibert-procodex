@@ -3,7 +3,7 @@ import numpy as np
 import random, time, datetime
 from tqdm import tqdm
 from pathlib import Path
-from transformers import get_scheduler
+from transformers import get_scheduler, AutoModel
 from torch.utils.data import DataLoader, RandomSampler, TensorDataset
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 
@@ -26,7 +26,16 @@ from scibert.features.build_features import build_features
 from scibert.models.dispatcher import MODELS
 
 
-def initialize(seed):
+def initialize(seed: int) -> str:
+    """Projetc Initialization with custom seeds for reproducibility
+
+    Args:
+        seed (int): Reproducible seeds
+
+    Returns:
+        str: Working device, either cuda or cpu
+    """
+
     logger.info(f"Initializing development pipeline with SEED: {seed}")
 
     random.seed(seed)
@@ -41,7 +50,16 @@ def initialize(seed):
     return device
 
 
-def generate_inputs(X, y):
+def generate_inputs(X: np.ndarray, y: np.ndarray) -> list:
+    """Generate tokenized inputs based on numpy array of sequences
+
+    Args:
+        X (np.ndarray): Sequences of data, combined from the feature engineering
+        y (np.ndarray): Targets enumerating to the sequences of data, X
+
+    Returns:
+        list: model inputs: input_ids, attention_masks, target labels
+    """
     input_ids = []
     attention_masks = []
     targets = []
@@ -75,20 +93,44 @@ def generate_inputs(X, y):
     return input_ids, attention_masks, targets
 
 
-# define format_time function
 def format_time(elapsed):
+    """Format elapsed time"""
     elapsed_rounded = int(round((elapsed)))
     return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
-# define flat_accuracy function
-def flat_accuracy(preds, labels):
+def flat_accuracy(preds: np.ndarray, labels: np.ndarray) -> float:
+    """Calculate the accuracy of the models based on the batched predictions and labels
+
+    Args:
+        preds (np.ndarray): model prediction for each batch
+        labels (np.ndarray): ground truth labels for each batch
+
+    Returns:
+        float: prediction accurac
+    """
     pred_flat = np.argmax(preds, axis=1).flatten()
     labels_flat = np.argmax(labels, axis=1).flatten()
     return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
 
-def evaluation_pipeline(model, testdataloader, device, loss_fn):
+def evaluation_pipeline(
+    model: AutoModel,
+    testdataloader: torch.utils.data.DataLoader,
+    device: str,
+    loss_fn: torch.nn.CrossEntropyLoss,
+) -> list:
+    """Evaluation Pipeline for model validation
+
+    Args:
+        model (AutoModel): Transformers models with a classification head on top of it
+        testdataloader (torch.utils.data.DataLoader): Test loader for batching and scheduling test inputs
+        device (str): device to run the evaluation pipeline: cuda or cpu
+        loss_fn (torch.nn.CrossEntropyLoss): Test loss functions
+
+    Returns:
+        list: evaluation metrics like [total_eval_loss, total_eval_accuracy, true_labels, predictions]
+    """
     ## MODEL EVALUATION
 
     model.eval()
@@ -108,7 +150,7 @@ def evaluation_pipeline(model, testdataloader, device, loss_fn):
             labels = labels.to(device)
 
             logits = model(
-                input_ids,  # set a sigmoid layer
+                input_ids,
                 attention_masks,
             )
 
@@ -126,7 +168,22 @@ def evaluation_pipeline(model, testdataloader, device, loss_fn):
     return total_eval_loss, total_eval_accuracy, true_labels, predictions
 
 
-def training_pipeline(train_X, train_y, test_X, test_y, device):
+def training_pipeline(
+    train_X: np.ndarray,
+    train_y: np.ndarray,
+    test_X: np.ndarray,
+    test_y: np.ndarray,
+    device: str,
+) -> None:
+    """Training Pipeline for finetuning model
+
+    Args:
+        train_X (np.ndarray): Training X
+        train_y (np.ndarray): Training y
+        test_X (np.ndarray): Testing X
+        test_y (np.ndarray): Testing y
+        device (str): Device to run the model on: cuda or cpu
+    """
     logger.info("Entering training pipeline")
 
     # DATASETS
@@ -247,6 +304,7 @@ def training_pipeline(train_X, train_y, test_X, test_y, device):
 
 
 def main():
+    """Main Runner Function to the entire project"""
     device = initialize(SEED)
 
     traindf, testdf = make(DATA, TEST_DIR)

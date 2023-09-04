@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from pathlib import Path
-
+from transformers import AutoModel
 from scibert.preprocessing.make_data import (
     process_content,
     process_title,
@@ -16,6 +16,15 @@ from scibert.config import MODEL, TOKENS_MAX_LENGTH, CKPTH_DIR, SEED, LABEL_MAPP
 
 
 def initialize(seed):
+    """Projetc Initialization with custom seeds for reproducibility
+
+    Args:
+        seed (int): Reproducible seeds
+
+    Returns:
+        str: Working device, either cuda or cpu
+    """
+
     logger.info(f"Initializing development pipeline with SEED: {seed}")
 
     random.seed(seed)
@@ -30,7 +39,15 @@ def initialize(seed):
     return device
 
 
-def load_model(ckpth):
+def load_model(ckpth: str) -> AutoModel:
+    """Model serializer based on the checkpoint
+
+    Args:
+        ckpth (str): model checkpoint path
+
+    Returns:
+        AutoModel: Transformer Automodel
+    """
     logger.info("Loading saved model from: {ckpth}")
     model = MODELS[MODEL]["model"]
 
@@ -43,7 +60,15 @@ def reverse_label_mapper(label):
     return list(LABEL_MAPPER.keys())[list(LABEL_MAPPER.values()).index(label)]
 
 
-def inference(query):
+def inference(query: dict) -> str:
+    """Run inference in the trained model checkpoint and return the model prediction
+
+    Args:
+        query (dict): User input respective columns for inference
+
+    Returns:
+        str: model prediction as a class value
+    """
     logger.info(f"Query: {query}")
 
     device = initialize(SEED)

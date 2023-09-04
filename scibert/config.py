@@ -1,3 +1,6 @@
+"""All project configurations and hyperparameters"""
+
+
 BASE_DIR = "scibert/"
 CKPTH_DIR = "checkpoints/"
 DATA_DIR = "data/raw"
