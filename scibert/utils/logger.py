@@ -1,7 +1,9 @@
+"""Loggers utility to set the sink and the log dir
+"""
+
+
 from scibert.config import LOG_DIR, LOG_FORMAT
 from loguru import logger
-
-# Specifying Logger Format
 
 
 # prevent loguru from printing the logs in the console

@@ -58,27 +58,41 @@
 </span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a><span class="kn">from</span> <span class="nn">scibert.utils.logger</span> <span class="kn">import</span> <span class="n">logger</span>
 </span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a>
 </span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a>
-</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a><span class="k">def</span> <span class="nf">pickle_serializer</span><span class="p">(</span><span class="nb">object</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;save&quot;</span><span class="p">):</span>
-</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a>    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;save&quot;</span><span class="p">:</span>
-</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving object at </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a>            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">handle</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a>        <span class="k">return</span> <span class="kc">True</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a>
-</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a>    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;load&quot;</span><span class="p">:</span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a>            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading object from </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a>            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a>                <span class="nb">object</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a>            <span class="k">return</span> <span class="nb">object</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a>        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
-</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a>            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File not found at &#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
-</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a>    <span class="k">else</span><span class="p">:</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a>        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Serializer mode not found&quot;</span><span class="p">)</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a>
-</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a>
-</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a>    <span class="k">pass</span>
+</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a><span class="k">def</span> <span class="nf">pickle_serializer</span><span class="p">(</span><span class="nb">object</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;save&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Pickle serializer to save or load objects to/from checkpoints</span>
+</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a>
+</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a><span class="sd">    Args:</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="sd">        object (_type_, optional): Object to save. Defaults to None.</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a><span class="sd">        path (_type_, optional): Path to save to/load from. Defaults to None.</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a><span class="sd">        mode (str, optional): mode of serializer:  save or load. Defaults to &quot;save&quot;.</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a>
+</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a><span class="sd">    Raises:</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a><span class="sd">        Exception: FileNotFound error while trying to load a non existing object</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a><span class="sd">        Exception: Serializer mode not found, except load/save</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a>
+</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a><span class="sd">    Returns:</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a><span class="sd">        bool: status of serialization</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a>    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;save&quot;</span><span class="p">:</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving object at </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a>            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">handle</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a>        <span class="k">return</span> <span class="kc">True</span>
+</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a>
+</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a>    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;load&quot;</span><span class="p">:</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a>            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading object from </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a>            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a>                <span class="nb">object</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a>            <span class="k">return</span> <span class="nb">object</span>
+</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a>        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a>            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File not found at &#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a>        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Serializer mode not found&quot;</span><span class="p">)</span>
+</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a>
+</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a>
+</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+</span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a>    <span class="k">pass</span>
 </span></pre></div>
 
 
@@ -88,32 +102,69 @@
 <div class="attr function">
 
         <span class="def">def</span>
-        <span class="name">pickle_serializer</span><span class="signature pdoc-code condensed">(<span class="param"><span class="nb">object</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">path</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;save&#39;</span></span><span class="return-annotation">):</span></span>
+        <span class="name">pickle_serializer</span><span class="signature pdoc-code condensed">(<span class="param"><span class="nb">object</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">path</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;save&#39;</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
                 <label class="view-source-button" for="pickle_serializer-view-source"><span>View Source</span></label>
 
     </div>
     <a class="headerlink" href="#pickle_serializer"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="pickle_serializer-6"><a href="#pickle_serializer-6"><span class="linenos"> 6</span></a><span class="k">def</span> <span class="nf">pickle_serializer</span><span class="p">(</span><span class="nb">object</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;save&quot;</span><span class="p">):</span>
-</span><span id="pickle_serializer-7"><a href="#pickle_serializer-7"><span class="linenos"> 7</span></a>    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;save&quot;</span><span class="p">:</span>
-</span><span id="pickle_serializer-8"><a href="#pickle_serializer-8"><span class="linenos"> 8</span></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving object at </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-</span><span id="pickle_serializer-9"><a href="#pickle_serializer-9"><span class="linenos"> 9</span></a>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-</span><span id="pickle_serializer-10"><a href="#pickle_serializer-10"><span class="linenos">10</span></a>            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">handle</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
-</span><span id="pickle_serializer-11"><a href="#pickle_serializer-11"><span class="linenos">11</span></a>        <span class="k">return</span> <span class="kc">True</span>
-</span><span id="pickle_serializer-12"><a href="#pickle_serializer-12"><span class="linenos">12</span></a>
-</span><span id="pickle_serializer-13"><a href="#pickle_serializer-13"><span class="linenos">13</span></a>    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;load&quot;</span><span class="p">:</span>
-</span><span id="pickle_serializer-14"><a href="#pickle_serializer-14"><span class="linenos">14</span></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="pickle_serializer-15"><a href="#pickle_serializer-15"><span class="linenos">15</span></a>            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading object from </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="pickle_serializer-16"><a href="#pickle_serializer-16"><span class="linenos">16</span></a>            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-</span><span id="pickle_serializer-17"><a href="#pickle_serializer-17"><span class="linenos">17</span></a>                <span class="nb">object</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
-</span><span id="pickle_serializer-18"><a href="#pickle_serializer-18"><span class="linenos">18</span></a>            <span class="k">return</span> <span class="nb">object</span>
-</span><span id="pickle_serializer-19"><a href="#pickle_serializer-19"><span class="linenos">19</span></a>        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
-</span><span id="pickle_serializer-20"><a href="#pickle_serializer-20"><span class="linenos">20</span></a>            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File not found at &#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
-</span><span id="pickle_serializer-21"><a href="#pickle_serializer-21"><span class="linenos">21</span></a>    <span class="k">else</span><span class="p">:</span>
-</span><span id="pickle_serializer-22"><a href="#pickle_serializer-22"><span class="linenos">22</span></a>        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Serializer mode not found&quot;</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="pickle_serializer-6"><a href="#pickle_serializer-6"><span class="linenos"> 6</span></a><span class="k">def</span> <span class="nf">pickle_serializer</span><span class="p">(</span><span class="nb">object</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;save&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="pickle_serializer-7"><a href="#pickle_serializer-7"><span class="linenos"> 7</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Pickle serializer to save or load objects to/from checkpoints</span>
+</span><span id="pickle_serializer-8"><a href="#pickle_serializer-8"><span class="linenos"> 8</span></a>
+</span><span id="pickle_serializer-9"><a href="#pickle_serializer-9"><span class="linenos"> 9</span></a><span class="sd">    Args:</span>
+</span><span id="pickle_serializer-10"><a href="#pickle_serializer-10"><span class="linenos">10</span></a><span class="sd">        object (_type_, optional): Object to save. Defaults to None.</span>
+</span><span id="pickle_serializer-11"><a href="#pickle_serializer-11"><span class="linenos">11</span></a><span class="sd">        path (_type_, optional): Path to save to/load from. Defaults to None.</span>
+</span><span id="pickle_serializer-12"><a href="#pickle_serializer-12"><span class="linenos">12</span></a><span class="sd">        mode (str, optional): mode of serializer:  save or load. Defaults to &quot;save&quot;.</span>
+</span><span id="pickle_serializer-13"><a href="#pickle_serializer-13"><span class="linenos">13</span></a>
+</span><span id="pickle_serializer-14"><a href="#pickle_serializer-14"><span class="linenos">14</span></a><span class="sd">    Raises:</span>
+</span><span id="pickle_serializer-15"><a href="#pickle_serializer-15"><span class="linenos">15</span></a><span class="sd">        Exception: FileNotFound error while trying to load a non existing object</span>
+</span><span id="pickle_serializer-16"><a href="#pickle_serializer-16"><span class="linenos">16</span></a><span class="sd">        Exception: Serializer mode not found, except load/save</span>
+</span><span id="pickle_serializer-17"><a href="#pickle_serializer-17"><span class="linenos">17</span></a>
+</span><span id="pickle_serializer-18"><a href="#pickle_serializer-18"><span class="linenos">18</span></a><span class="sd">    Returns:</span>
+</span><span id="pickle_serializer-19"><a href="#pickle_serializer-19"><span class="linenos">19</span></a><span class="sd">        bool: status of serialization</span>
+</span><span id="pickle_serializer-20"><a href="#pickle_serializer-20"><span class="linenos">20</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="pickle_serializer-21"><a href="#pickle_serializer-21"><span class="linenos">21</span></a>    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;save&quot;</span><span class="p">:</span>
+</span><span id="pickle_serializer-22"><a href="#pickle_serializer-22"><span class="linenos">22</span></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving object at </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+</span><span id="pickle_serializer-23"><a href="#pickle_serializer-23"><span class="linenos">23</span></a>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+</span><span id="pickle_serializer-24"><a href="#pickle_serializer-24"><span class="linenos">24</span></a>            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">handle</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+</span><span id="pickle_serializer-25"><a href="#pickle_serializer-25"><span class="linenos">25</span></a>        <span class="k">return</span> <span class="kc">True</span>
+</span><span id="pickle_serializer-26"><a href="#pickle_serializer-26"><span class="linenos">26</span></a>
+</span><span id="pickle_serializer-27"><a href="#pickle_serializer-27"><span class="linenos">27</span></a>    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;load&quot;</span><span class="p">:</span>
+</span><span id="pickle_serializer-28"><a href="#pickle_serializer-28"><span class="linenos">28</span></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="pickle_serializer-29"><a href="#pickle_serializer-29"><span class="linenos">29</span></a>            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading object from </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="pickle_serializer-30"><a href="#pickle_serializer-30"><span class="linenos">30</span></a>            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+</span><span id="pickle_serializer-31"><a href="#pickle_serializer-31"><span class="linenos">31</span></a>                <span class="nb">object</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+</span><span id="pickle_serializer-32"><a href="#pickle_serializer-32"><span class="linenos">32</span></a>            <span class="k">return</span> <span class="nb">object</span>
+</span><span id="pickle_serializer-33"><a href="#pickle_serializer-33"><span class="linenos">33</span></a>        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+</span><span id="pickle_serializer-34"><a href="#pickle_serializer-34"><span class="linenos">34</span></a>            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File not found at &#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+</span><span id="pickle_serializer-35"><a href="#pickle_serializer-35"><span class="linenos">35</span></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="pickle_serializer-36"><a href="#pickle_serializer-36"><span class="linenos">36</span></a>        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Serializer mode not found&quot;</span><span class="p">)</span>
 </span></pre></div>
 
 
+            <div class="docstring"><p>Pickle serializer to save or load objects to/from checkpoints</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>object (_type_, optional):</strong>  Object to save. Defaults to None.</li>
+<li><strong>path (_type_, optional):</strong>  Path to save to/load from. Defaults to None.</li>
+<li><strong>mode (str, optional):</strong>  mode of serializer:  save or load. Defaults to "save".</li>
+</ul>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>Exception:</strong>  FileNotFound error while trying to load a non existing object</li>
+<li><strong>Exception:</strong>  Serializer mode not found, except load/save</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>bool: status of serialization</p>
+</blockquote>
+</div>
 
 
                 </section>

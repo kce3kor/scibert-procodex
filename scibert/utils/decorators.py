@@ -1,4 +1,8 @@
-import os, time
+"""Custom decorators utility
+
+"""
+
+import time
 import functools
 
 
