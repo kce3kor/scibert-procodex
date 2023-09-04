@@ -53,3 +53,8 @@ def build_features(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
 if __name__ == "__main__":
     # import training and testing dataframes
     train, test = make(DATA, TEST_DIR)
+    train_X, train_y, test_X, test_y = build_features(train, test)
+    print(train_X.shape, train_y.shape)
+    print(test_X.shape, test_y.shape)
+
+    print(train_X.ndim, type(train_X) == np.ndarray)

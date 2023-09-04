@@ -48,7 +48,7 @@ def load_model(ckpth: str) -> AutoModel:
     Returns:
         AutoModel: Transformer Automodel
     """
-    logger.info("Loading saved model from: {ckpth}")
+    logger.info(f"Loading saved model from: {ckpth}")
     model = MODELS[MODEL]["model"]
 
     model.load_state_dict(torch.load(ckpth))
