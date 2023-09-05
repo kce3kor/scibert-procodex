@@ -24,6 +24,7 @@ from scibert.config import (
     TOKENS_MAX_LENGTH,
     LEARNING_RATE,
     CKPTH_DIR,
+    LABEL_MAPPER,
 )
 from scibert.features.build_features import build_features
 from scibert.models.dispatcher import MODELS
@@ -50,6 +51,8 @@ def initialize(seed: int) -> str:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     logger.info(f"Device: {device}")
+
+    Path(CKPTH_DIR, "models").mkdir(parents=True, exist_ok=True)
 
     return device
 
@@ -281,7 +284,10 @@ def training_pipeline(
                 logger.info(f"Loss at step {step}: {loss.item()}")
 
         logger.info("Saving trained model instance per epoch")
-        torch.save(model.state_dict(), Path(CKPTH_DIR, f"{MODEL}_{epoch}.pt"))
+        torch.save(
+            model.state_dict(),
+            Path(CKPTH_DIR, "models", f"{MODEL}_{epoch}.pt"),
+        )
 
         ## EVALUATION PIPELINE
         logger.info("Entering Evaluation pipeline")
@@ -292,6 +298,12 @@ def training_pipeline(
             true_labels,
             predictions,
         ) = evaluation_pipeline(model, testdataloader, device, loss_fn)
+
+        cm = confusion_matrix(
+            y_true=true_labels,
+            y_pred=predictions,
+            labels=list(LABEL_MAPPER.values()),
+        )
 
         mlflow.log_metrics(
             {
@@ -304,13 +316,22 @@ def training_pipeline(
                 "Accuracy Sklearn": accuracy_score(true_labels, predictions),
             }
         )
-        # mlflow.log_dict(
-        #     np.array(confusion_matrix(true_labels, predictions)).tolist(),
-        #     f"confusion_matrix_{epoch}.json",
-        # )
+        mlflow.log_metrics(
+            {
+                "TN": cm[0][0],
+                "FP": cm[0][1],
+                "FN": cm[1][0],
+                "TP": cm[1][1],
+            }
+        )
+        mlflow.log_dict(
+            np.array(cm).tolist(),
+            f"confusion_matrix_{epoch}.json",
+        )
+
         mlflow.pytorch.log_model(
             pytorch_model=model,
-            artifact_path="model",
+            artifact_path=f"model",
             registered_model_name=f"finetune-tinyBERT",
         )
 
@@ -319,10 +340,6 @@ def training_pipeline(
 
 def main():
     """Main Runner Function to the entire project"""
-    device = initialize(SEED)
-
-    traindf, testdf = make(DATA, TEST_DIR)
-    train_X, train_y, test_X, test_y = build_features(traindf[:20], testdf[:20])
 
     experiment_name = "finetune-tinyBERT"
 
@@ -333,7 +350,9 @@ def main():
 
     mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
 
-    with mlflow.start_run(experiment_id=exp_id, run_name="Run1") as r:
+    with mlflow.start_run(
+        experiment_id=exp_id, run_name="Run1", description="Test Description for Run1"
+    ):
         mlflow.set_tags(
             {
                 "Description": "Finetunning tinyBERT Model with procodex dataset",
@@ -341,6 +360,14 @@ def main():
                 "Model": MODEL,
             }
         )
+
+        device = initialize(SEED)
+        traindf, testdf = make(DATA, TEST_DIR)
+
+        mlflow.log_input(mlflow.data.from_pandas(traindf), context="train")
+        mlflow.log_input(mlflow.data.from_pandas(testdf), context="test")
+
+        train_X, train_y, test_X, test_y = build_features(traindf[:-1], testdf[:-1])
 
         training_pipeline(train_X, train_y, test_X, test_y, device)
 
