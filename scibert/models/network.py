@@ -31,7 +31,7 @@ class CustomBERTModel(torch.nn.Module):
         x = self.dropout(x)
 
         x = self.linear3(x)
-        x = torch.sigmoid(x)
+        # x = torch.sigmoid(x)
 
         x = self.softmax(x)
 

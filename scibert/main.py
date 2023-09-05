@@ -216,7 +216,7 @@ def training_pipeline(
 
     # OPTIMIZERS AND SCHEDULERS
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-    loss_fn = torch.nn.CrossEntropyLoss()
+    loss_fn = torch.nn.BCELoss()
 
     total_steps = len(traindataloader) * EPOCHS
 
@@ -242,11 +242,11 @@ def training_pipeline(
 
     logger.info(f"Training Started ... ")
 
-    model.train()
-
-    model.zero_grad()
-
     for epoch in range(EPOCHS):
+        model.train()
+
+        model.zero_grad()
+
         logger.info(f"Epoch {epoch + 1}/{EPOCHS}")
         logger.info("-" * 10)
 
@@ -351,7 +351,9 @@ def main():
     mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
 
     with mlflow.start_run(
-        experiment_id=exp_id, run_name="Run1", description="Test Description for Run1"
+        experiment_id=exp_id,
+        run_name="Run1",
+        description="Removal of softmax because its not required",
     ):
         mlflow.set_tags(
             {
@@ -367,7 +369,7 @@ def main():
         mlflow.log_input(mlflow.data.from_pandas(traindf), context="train")
         mlflow.log_input(mlflow.data.from_pandas(testdf), context="test")
 
-        train_X, train_y, test_X, test_y = build_features(traindf[:-1], testdf[:-1])
+        train_X, train_y, test_X, test_y = build_features(traindf[:20], testdf[:20])
 
         training_pipeline(train_X, train_y, test_X, test_y, device)
 
