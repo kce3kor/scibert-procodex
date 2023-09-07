@@ -1,9 +1,10 @@
-from scibert.preprocessing.make_data import make
-from scibert.config import DATA, TEST_DIR
-from scibert.utils.logger import logger
-
-import pandas as pd
 import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+from scibert.config import DATA, TEST_DIR
+from scibert.preprocessing.make_data import make
+from scibert.utils.logger import logger
 
 
 def combine_features(df: pd.DataFrame) -> np.ndarray:
@@ -16,9 +17,7 @@ def combine_features(df: pd.DataFrame) -> np.ndarray:
     Returns:
         np.ndarray: len X 1 : Returns a combined sequence delimited by [SEP] for input to model
     """
-    assert (
-        all(x in df.columns for x in ["title", "keywords", "content", "target"]) == True
-    )
+    assert all(x in df.columns for x in ["title", "keywords", "content", "target"]) == True
 
     # create a single sentence that combines the entire three columns as X
     # and target as y
@@ -41,13 +40,14 @@ def build_features(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
     Returns:
         np.ndarray: train_X, train_y, test_X, test_y (numpy arrays)
     """
-    logger.info(
-        "Building features with each columns: String concatenation delimited with [SEP]"
-    )
-    train_X, train_y = combine_features(train)
+    logger.info("Building features with each columns: String concatenation delimited with [SEP]")
+    X, y = combine_features(train)
+
+    train_X, val_X, train_y, val_y = train_test_split(X, y, test_size=0.25, random_state=1, shuffle=True, stratify=y)
+
     test_X, test_y = combine_features(test)
 
-    return train_X, train_y, test_X, test_y
+    return train_X, train_y, val_X, val_y, test_X, test_y
 
 
 if __name__ == "__main__":

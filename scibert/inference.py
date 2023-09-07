@@ -1,42 +1,28 @@
+import os
 import random
-import numpy as np
-import torch
-
 from pathlib import Path
+
+import torch
 from transformers import AutoModel
+
+from scibert.config import *
+from scibert.main import LightningModel
+from scibert.models.dispatcher import MODELS
 from scibert.preprocessing.make_data import (
     process_content,
-    process_title,
     process_keywords,
+    process_title,
 )
-from scibert.models.dispatcher import MODELS
 from scibert.utils.logger import logger
 
-from scibert.config import MODEL, TOKENS_MAX_LENGTH, CKPTH_DIR, SEED, LABEL_MAPPER
 
-
-def initialize(seed):
-    """Projetc Initialization with custom seeds for reproducibility
-
-    Args:
-        seed (int): Reproducible seeds
-
-    Returns:
-        str: Working device, either cuda or cpu
-    """
-
-    logger.info(f"Initializing development pipeline with SEED: {seed}")
-
+def initialize(seed: int) -> str:
     random.seed(seed)
     torch.manual_seed(seed)
     torch.backends.cudnn.derterministic = True
     torch.cuda.manual_seed_all(seed)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    logger.info(f"Device: {device}")
-
-    return device
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def load_model(ckpth: str) -> AutoModel:
@@ -49,15 +35,24 @@ def load_model(ckpth: str) -> AutoModel:
         AutoModel: Transformer Automodel
     """
     logger.info(f"Loading saved model from: {ckpth}")
+
     model = MODELS[MODEL]["model"]
 
-    model.load_state_dict(torch.load(ckpth))
+    lightining_model = LightningModel.load_from_checkpoint(ckpth, model=model)
 
-    return model
+    return lightining_model
 
 
 def reverse_label_mapper(label):
     return list(LABEL_MAPPER.keys())[list(LABEL_MAPPER.values()).index(label)]
+
+
+def inference_preprocess(data, preprocesses):
+    preprocessed = {}
+    for column, transform in preprocesses.items():
+        preprocessed[column] = transform(data[column])
+
+    return preprocessed
 
 
 def inference(query: dict) -> str:
@@ -71,43 +66,38 @@ def inference(query: dict) -> str:
     """
     logger.info(f"Query: {query}")
 
-    device = initialize(SEED)
+    query = inference_preprocess(
+        query,
+        preprocesses={
+            "title": process_title,
+            "keywords": process_keywords,
+            "content": process_content,
+        },
+    )
 
-    query = {
-        "title": process_title(query["title"]),
-        "content": process_content(query["content"]),
-        "keywords": process_keywords(query["keywords"]),
-    }
-
-    input = query["title"] + "[SEP]" + query["keywords"] + "[SEP]" + query["content"]
-    logger.info(f"Model input: {input}")
+    X = "[SEP]".join(query.values())
 
     tokenizer = MODELS[MODEL]["tokenizer"]
 
     inputs = tokenizer.encode_plus(
-        input,
+        X,
         add_special_tokens=True,
         max_length=TOKENS_MAX_LENGTH,
         truncation=True,
         padding="max_length",
         return_attention_mask=True,
         return_tensors="pt",
-    ).to(device)
+    )
 
-    model = load_model(Path(CKPTH_DIR, f"{MODEL}_{9}.pt"))
-    model = model.to(device)
+    ids, masks = inputs["input_ids"], inputs["attention_mask"]
 
-    logger.info("Running model evaluation...")
-    model.eval()
+    lightining_model = load_model(Path(CKPTH_DIR, "lightning.pt"))
 
     with torch.no_grad():
-        logits = model(inputs["input_ids"], inputs["attention_mask"])
-    logits = logits.detach().cpu().numpy()
+        logits = lightining_model(ids, masks)
 
-    label = np.argmax(logits, axis=1)
+    label = torch.argmax(logits, dim=1)
     prediction = reverse_label_mapper(label)
-
-    logger.info(f"Output: {logits, label, prediction}")
 
     return prediction
 
@@ -115,7 +105,8 @@ def inference(query: dict) -> str:
 if __name__ == "__main__":
     query = {
         "title": "This is the title",
-        "content": "This is the content",
-        "keywords": "This is a keywords",
+        "keywords": "this;is;the;keywords",
+        "content": "This is the content in user query",
     }
+
     print(inference(query))

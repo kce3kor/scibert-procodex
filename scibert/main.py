@@ -1,317 +1,250 @@
-import torch
-import numpy as np
-import random, time, datetime
-from tqdm import tqdm
+import os
+import random
 from pathlib import Path
-from transformers import get_scheduler, AutoModel
-from torch.utils.data import DataLoader, RandomSampler, TensorDataset
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 
+import lightning as L
+import numpy as np
+import torch
+import torch.nn.functional as F
+import torchmetrics
+from lightning.pytorch.loggers import MLFlowLogger
+from lightning.pytorch.utilities.types import EVAL_DATALOADERS
+from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 
-from scibert.preprocessing.make_data import make
-from scibert.utils.logger import logger
-
-from scibert.config import (
-    DATA,
-    TEST_DIR,
-    SEED,
-    MODEL,
-    BATCH_SIZE,
-    EPOCHS,
-    TOKENS_MAX_LENGTH,
-    LEARNING_RATE,
-    CKPTH_DIR,
-)
+from scibert.config import *
 from scibert.features.build_features import build_features
 from scibert.models.dispatcher import MODELS
+from scibert.preprocessing.make_data import make
+from scibert.utils.logger import logger
+from scibert.utils.serializer import pickle_serializer
 
 
 def initialize(seed: int) -> str:
-    """Projetc Initialization with custom seeds for reproducibility
-
-    Args:
-        seed (int): Reproducible seeds
-
-    Returns:
-        str: Working device, either cuda or cpu
-    """
-
-    logger.info(f"Initializing development pipeline with SEED: {seed}")
-
     random.seed(seed)
     torch.manual_seed(seed)
     torch.backends.cudnn.derterministic = True
     torch.cuda.manual_seed_all(seed)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    logger.info(f"Device: {device}")
-
-    return device
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def generate_inputs(X: np.ndarray, y: np.ndarray) -> list:
-    """Generate tokenized inputs based on numpy array of sequences
+class ProcodexDataModule(L.LightningDataModule):
+    def __init__(self, batch_size=64):
+        super().__init__()
 
-    Args:
-        X (np.ndarray): Sequences of data, combined from the feature engineering
-        y (np.ndarray): Targets enumerating to the sequences of data, X
+        self.batch_size = batch_size
 
-    Returns:
-        list: model inputs: input_ids, attention_masks, target labels
-    """
-    input_ids = []
-    attention_masks = []
-    targets = []
+    def generate_model_inputs(self, X: np.ndarray, y: np.ndarray) -> list:
+        input_ids = []
+        attention_masks = []
+        targets = []
 
-    tokenizer = MODELS[MODEL]["tokenizer"]
+        tokenizer = MODELS[MODEL]["tokenizer"]
 
-    for i in tqdm(range(len(X))):
-        X[i] = X[i].strip()
+        for i in tqdm(range(len(X))):
+            X[i] = X[i].strip()
 
-        inputs = tokenizer.encode_plus(
-            X[i],
-            add_special_tokens=True,
-            max_length=TOKENS_MAX_LENGTH,
-            truncation=True,
-            padding="max_length",
-            return_attention_mask=True,
-            return_tensors="pt",
+            inputs = tokenizer.encode_plus(
+                X[i],
+                add_special_tokens=True,
+                max_length=TOKENS_MAX_LENGTH,
+                truncation=True,
+                padding="max_length",
+                return_attention_mask=True,
+                return_tensors="pt",
+            )
+
+            input_ids.append(inputs["input_ids"].squeeze(0))
+            attention_masks.append(inputs["attention_mask"].squeeze(0))
+            targets.append(y[i])
+
+        input_ids = torch.stack(input_ids, dim=0)
+        attention_masks = torch.stack(attention_masks, dim=0)
+        targets = torch.from_numpy(np.array(targets))
+
+        return input_ids, attention_masks, targets
+
+    def prepare_data(self):
+        pass
+
+    def setup(self, stage: str):
+        if stage == "fit" or stage == None:
+            if os.path.exists(TRAIN_PROCESSED_DATA) or os.path.exists(VAL_PROCESSED_DATA):
+                train_X, train_y = pickle_serializer(
+                    path=TRAIN_PROCESSED_DATA,
+                    mode="load",
+                )
+                val_X, val_y = pickle_serializer(
+                    path=VAL_PROCESSED_DATA,
+                    mode="load",
+                )
+            else:
+                raise Exception(f"File not found at {TRAIN_PROCESSED_DATA}, {VAL_PROCESSED_DATA}")
+
+            trainIds, trainMask, trainLabel = self.generate_model_inputs(train_X, train_y)
+            valIds, valMask, valLabel = self.generate_model_inputs(val_X, val_y)
+
+            self.traindataset = TensorDataset(
+                trainIds,
+                trainMask,
+                trainLabel,
+            )
+            self.valdataset = TensorDataset(valIds, valMask, valLabel)
+
+        if stage == "test" or stage == None:
+            if os.path.exists(TEST_PROCESSED_DATA):
+                test_X, test_y = pickle_serializer(
+                    path=TEST_PROCESSED_DATA,
+                    mode="load",
+                )
+            else:
+                raise Exception(f"File not found at {TEST_PROCESSED_DATA}")
+
+            testIds, testMask, testLabel = self.generate_model_inputs(test_X, test_y)
+
+            self.testdataset = TensorDataset(
+                testIds,
+                testMask,
+                testLabel,
+            )
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.traindataset,
+            batch_size=self.batch_size,
+            num_workers=10,
+            shuffle=True,
+            drop_last=True,
         )
 
-        input_ids.append(inputs["input_ids"].squeeze(0))
-        attention_masks.append(inputs["attention_mask"].squeeze(0))
+    def val_dataloader(self):
+        return DataLoader(
+            self.valdataset,
+            batch_size=self.batch_size,
+            num_workers=10,
+        )
 
-        target = torch.zeros(2)
-        target[y[i]] = 1
-        targets.append(target)
+    def test_dataloader(self):
+        return DataLoader(
+            self.testdataset,
+            batch_size=self.batch_size,
+            num_workers=10,
+        )
 
-    input_ids = torch.stack(input_ids, dim=0)
-    attention_masks = torch.stack(attention_masks, dim=0)
-    targets = torch.stack(targets, dim=0)
-
-    return input_ids, attention_masks, targets
-
-
-def format_time(elapsed):
-    """Format elapsed time"""
-    elapsed_rounded = int(round((elapsed)))
-    return str(datetime.timedelta(seconds=elapsed_rounded))
+    def predict_dataloader(self):
+        pass
 
 
-def flat_accuracy(preds: np.ndarray, labels: np.ndarray) -> float:
-    """Calculate the accuracy of the models based on the batched predictions and labels
+class LightningModel(L.LightningModule):
+    def __init__(self, model, learning_rate):
+        super().__init__()
+        self.model = model
+        self.learning_rate = learning_rate
 
-    Args:
-        preds (np.ndarray): model prediction for each batch
-        labels (np.ndarray): ground truth labels for each batch
+        self.save_hyperparameters(ignore=["model"])
 
-    Returns:
-        float: prediction accurac
-    """
-    pred_flat = np.argmax(preds, axis=1).flatten()
-    labels_flat = np.argmax(labels, axis=1).flatten()
-    return np.sum(pred_flat == labels_flat) / len(labels_flat)
+        self.train_acc = torchmetrics.Accuracy(task="binary")
+        self.val_acc = torchmetrics.Accuracy(task="binary")
 
+    def forward(self, ids, masks):
+        return self.model(ids, masks)
 
-def evaluation_pipeline(
-    model: AutoModel,
-    testdataloader: torch.utils.data.DataLoader,
-    device: str,
-    loss_fn: torch.nn.CrossEntropyLoss,
-) -> list:
-    """Evaluation Pipeline for model validation
+    def _shared_step(self, batch):
+        ids, masks, true_labels = batch
+        logits = self.forward(ids, masks)
+        loss = F.cross_entropy(logits, true_labels)
+        predicted_labels = torch.argmax(logits, dim=1)
 
-    Args:
-        model (AutoModel): Transformers models with a classification head on top of it
-        testdataloader (torch.utils.data.DataLoader): Test loader for batching and scheduling test inputs
-        device (str): device to run the evaluation pipeline: cuda or cpu
-        loss_fn (torch.nn.CrossEntropyLoss): Test loss functions
+        return (loss, true_labels, predicted_labels)
 
-    Returns:
-        list: evaluation metrics like [total_eval_loss, total_eval_accuracy, true_labels, predictions]
-    """
-    ## MODEL EVALUATION
+    def training_step(self, batch, batch_idx):
+        loss, true_labels, predicted_labels = self._shared_step(batch)
+        self.train_acc(predicted_labels, true_labels)
 
-    model.eval()
+        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_acc", self.train_acc, prog_bar=True, on_epoch=True, on_step=False)
+        return loss
 
-    total_eval_accuracy = 0
-    total_eval_loss = 0
-    predictions, true_labels = [], []
+    def validation_step(self, batch, batch_idx):
+        loss, true_labels, predicted_labels = self._shared_step(batch)
+        self.val_acc(predicted_labels, true_labels)
 
-    with torch.no_grad():
-        for _, batch in enumerate(testdataloader):
-            input_ids = batch[0]
-            attention_masks = batch[1]
-            labels = batch[2]
+        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_acc", self.val_acc, prog_bar=True)
 
-            input_ids = input_ids.to(device)
-            attention_masks = attention_masks.to(device)
-            labels = labels.to(device)
-
-            logits = model(
-                input_ids,
-                attention_masks,
-            )
-
-            loss = loss_fn(logits, labels)
-            total_eval_loss += loss.item()
-
-            logits = logits.detach().cpu().numpy()
-            label_ids = labels.to("cpu").numpy()
-
-            total_eval_accuracy += flat_accuracy(logits, label_ids)
-
-            predictions.extend(np.argmax(logits, axis=1).flatten().tolist())
-            true_labels.extend(np.argmax(label_ids, axis=1).flatten().tolist())
-
-    return total_eval_loss, total_eval_accuracy, true_labels, predictions
+    def configure_optimizers(self):
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate)
+        return optimizer
 
 
-def training_pipeline(
-    train_X: np.ndarray,
-    train_y: np.ndarray,
-    test_X: np.ndarray,
-    test_y: np.ndarray,
-    device: str,
-) -> None:
-    """Training Pipeline for finetuning model
+def training_pipeline() -> None:
+    traindf, testdf = make(DATA, TEST_DIR)
 
-    Args:
-        train_X (np.ndarray): Training X
-        train_y (np.ndarray): Training y
-        test_X (np.ndarray): Testing X
-        test_y (np.ndarray): Testing y
-        device (str): Device to run the model on: cuda or cpu
-    """
-    logger.info("Entering training pipeline")
+    train_X, train_y, val_X, val_y, test_X, test_y = build_features(traindf[:-1], testdf[:-1])
 
-    # DATASETS
-    logger.info("Generating Training Inputs: train_x, train_y")
-    trainInput, trainMask, trainLabel = generate_inputs(train_X, train_y)
-    traindataset = TensorDataset(trainInput, trainMask, trainLabel)
+    for object, path in zip(
+        [(train_X, train_y), (val_X, val_y), (test_X, test_y)],
+        [TRAIN_PROCESSED_DATA, VAL_PROCESSED_DATA, TEST_PROCESSED_DATA],
+    ):
+        pickle_serializer(object=object, path=path, mode="save")
 
-    logger.info("Generating Testing Inputs: test_x, test_y")
-    testInput, testMask, testLabel = generate_inputs(test_X, test_y)
-    testdataset = TensorDataset(testInput, testMask, testLabel)
+    dm = ProcodexDataModule(batch_size=32)
 
-    # DATALOADERS
-    traindataloader = DataLoader(
-        traindataset,
-        sampler=RandomSampler(traindataset),
-        batch_size=BATCH_SIZE,
-    )
-
-    testdataloader = DataLoader(
-        testdataset,
-        sampler=RandomSampler(testdataset),
-        batch_size=BATCH_SIZE,
-    )
-
-    # MODEL DEFINITION
-    logger.info(f"Building {MODEL} Model")
     model = MODELS[MODEL]["model"]
-    model = model.to(device)
 
-    # OPTIMIZERS AND SCHEDULERS
-    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-    loss_fn = torch.nn.CrossEntropyLoss()
+    lightining_model = LightningModel(model=model, learning_rate=LEARNING_RATE)
 
-    total_steps = len(traindataloader) * EPOCHS
-
-    scheduler = get_scheduler(
-        "linear",
-        optimizer=optimizer,
-        num_warmup_steps=0,
-        num_training_steps=total_steps,
+    trainer = L.Trainer(
+        max_epochs=EPOCHS,
+        accelerator="auto",
+        devices="auto",
+        log_every_n_steps=5,
+        deterministic=True,
+        logger=MLFlowLogger(),
     )
 
-    # MODEL TRAINING
+    trainer.fit(model=lightining_model, datamodule=dm)
 
-    logger.info(f"Training Started ... ")
-
-    training_stats = {}
-    # start training clock
-    start_time = time.time()
-
-    model.train()
-
-    model.zero_grad()
-
-    for epoch in range(EPOCHS):
-        logger.info(f"Epoch {epoch + 1}/{EPOCHS}")
-        logger.info("-" * 10)
-
-        total_train_loss = 0
-
-        for step, batch in enumerate(traindataloader):
-            input_ids = batch[0]
-            attention_masks = batch[1]
-            labels = batch[2]
-
-            input_ids = input_ids.to(device)
-            attention_masks = attention_masks.to(device)
-            labels = labels.to(device)
-
-            logits = model(
-                input_ids,
-                attention_masks,
-            )
-
-            loss = loss_fn(logits, labels)
-
-            total_train_loss += loss.item()
-
-            optimizer.zero_grad()
-
-            loss.backward()
-
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-
-            optimizer.step()
-
-            scheduler.step()
-
-            if step % 10 == 0:
-                logger.info(f"Loss at step {step}: {loss.item()}")
-
-        logger.info("Saving trained model instance per epoch")
-        torch.save(model.state_dict(), Path(CKPTH_DIR, f"{MODEL}_{epoch}.pt"))
-
-        ## EVALUATION PIPELINE
-        logger.info("Entering Evaluation pipeline")
-        (
-            total_eval_loss,
-            total_eval_accuracy,
-            true_labels,
-            predictions,
-        ) = evaluation_pipeline(model, testdataloader, device, loss_fn)
-
-        training_stats[epoch] = {
-            "Training Loss Per Epoch": total_train_loss,
-            "Average Training Loss": total_train_loss / len(traindataloader),
-            "Testing Loss Per Epoch": total_eval_loss,
-            "Average Test Loss PE": total_eval_loss / len(testdataloader),
-            "Average Test Accuracy PE": total_eval_accuracy / len(testdataloader),
-            "Training Time": format_time(time.time() - start_time),
-            "F1 Score": f1_score(true_labels, predictions),
-            "Confusion Matrix": confusion_matrix(true_labels, predictions),
-            "Accuracy (Sklearn)": accuracy_score(true_labels, predictions),
-        }
-        logger.info(f"Training Statistics: {training_stats}")
+    trainer.save_checkpoint(Path(CKPTH_DIR, "lightning.pt"))
 
     logger.info("Training complete!")
 
 
+def evaluation_pipeline():
+    model = MODELS[MODEL]["model"]
+
+    lightining_model = LightningModel.load_from_checkpoint(Path(CKPTH_DIR, "lightning.pt"), model=model)
+
+    dm = ProcodexDataModule()
+    dm.setup("test")
+
+    test_loader = dm.test_dataloader()
+    acc = torchmetrics.Accuracy(task="binary", num_classes=2)
+    cm = torchmetrics.ConfusionMatrix(task="binary")
+
+    lightining_model.eval()
+
+    for batch in test_loader:
+        ids, masks, true_labels = batch
+
+        with torch.inference_mode():
+            logits = lightining_model.forward(ids, masks)
+
+        predicted_labels = torch.argmax(logits, dim=1)
+
+        acc(predicted_labels, true_labels)
+        cm(predicted_labels, true_labels)
+
+    print(predicted_labels, acc.compute(), cm.compute())
+
+
 def main():
-    """Main Runner Function to the entire project"""
-    device = initialize(SEED)
+    initialize(SEED)
 
-    traindf, testdf = make(DATA, TEST_DIR)
+    training_pipeline()
 
-    train_X, train_y, test_X, test_y = build_features(traindf[:-1], testdf[:-1])
-
-    training_pipeline(train_X, train_y, test_X, test_y, device)
+    evaluation_pipeline()
 
 
 if __name__ == "__main__":

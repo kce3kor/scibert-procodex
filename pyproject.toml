@@ -27,7 +27,14 @@ pre-commit = "^3.3.3"
 notebook = "^7.0.3"
 pdoc = "^14.0.0"
 pytest = "^7.4.1"
+black = "^23.7.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
