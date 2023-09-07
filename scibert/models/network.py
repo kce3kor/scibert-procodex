@@ -7,11 +7,12 @@ class CustomBERTModel(torch.nn.Module):
 
         self.model = model
         self.hidden_dim = hidden_dim
-        self.linear1 = torch.nn.Linear(self.hidden_dim, 128)
-        self.linear2 = torch.nn.Linear(128, 64)
-        self.linear3 = torch.nn.Linear(64, 2)
+        self.linear1 = torch.nn.Linear(self.hidden_dim, 64)
+        self.linear2 = torch.nn.Linear(64, 32)
+        self.linear3 = torch.nn.Linear(32, 2)
         self.dropout = torch.nn.Dropout(0.3)
         self.tanh = torch.nn.Tanh()
+        self.relu = torch.nn.ReLU()
 
         self.softmax = torch.nn.Softmax(dim=1)
 
@@ -23,11 +24,11 @@ class CustomBERTModel(torch.nn.Module):
         )
 
         x = self.linear1(outputs[0][:, 0, :])
-        x = self.tanh(x)
+        x = self.relu(x)
         x = self.dropout(x)
 
         x = self.linear2(x)
-        x = self.tanh(x)
+        x = self.relu(x)
         x = self.dropout(x)
 
         x = self.linear3(x)

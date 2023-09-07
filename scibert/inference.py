@@ -75,7 +75,7 @@ def inference(query: dict) -> str:
         },
     )
 
-    X = "[SEP]".join(query.values())
+    X = concatenation_strategy(query.values())
 
     tokenizer = MODELS[MODEL]["tokenizer"]
 
@@ -103,6 +103,7 @@ def inference(query: dict) -> str:
 
 
 if __name__ == "__main__":
+    initialize(SEED)
     query = {
         "title": "This is the title",
         "keywords": "this;is;the;keywords",

@@ -7,8 +7,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import torchmetrics
+from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
-from lightning.pytorch.utilities.types import EVAL_DATALOADERS
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
@@ -18,6 +18,7 @@ from scibert.models.dispatcher import MODELS
 from scibert.preprocessing.make_data import make
 from scibert.utils.logger import logger
 from scibert.utils.serializer import pickle_serializer
+from scibert.utils.utils import TimingCallback
 
 
 def initialize(seed: int) -> str:
@@ -181,7 +182,7 @@ class LightningModel(L.LightningModule):
 def training_pipeline() -> None:
     traindf, testdf = make(DATA, TEST_DIR)
 
-    train_X, train_y, val_X, val_y, test_X, test_y = build_features(traindf[:-1], testdf[:-1])
+    train_X, train_y, val_X, val_y, test_X, test_y = build_features(traindf[:100], testdf[:100])
 
     for object, path in zip(
         [(train_X, train_y), (val_X, val_y), (test_X, test_y)],
@@ -195,8 +196,11 @@ def training_pipeline() -> None:
 
     lightining_model = LightningModel(model=model, learning_rate=LEARNING_RATE)
 
+    checkpoint_callbacks = ModelCheckpoint(save_top_k=1, mode="max", monitor="val_acc")
+
     trainer = L.Trainer(
         max_epochs=EPOCHS,
+        callbacks=[checkpoint_callbacks, TimingCallback()],
         accelerator="auto",
         devices="auto",
         log_every_n_steps=5,

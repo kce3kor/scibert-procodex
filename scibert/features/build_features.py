@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from scibert.config import DATA, TEST_DIR
+from scibert.config import DATA, TEST_DIR, VAL_SIZE, concatenation_strategy
 from scibert.preprocessing.make_data import make
 from scibert.utils.logger import logger
 
@@ -22,7 +22,7 @@ def combine_features(df: pd.DataFrame) -> np.ndarray:
     # create a single sentence that combines the entire three columns as X
     # and target as y
 
-    X = df[["title", "keywords", "content"]].apply(lambda x: "[SEP]".join(x), axis=1)
+    X = df[["title", "keywords", "content"]].apply(concatenation_strategy, axis=1)
 
     y = df["target"]
 
@@ -43,7 +43,7 @@ def build_features(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
     logger.info("Building features with each columns: String concatenation delimited with [SEP]")
     X, y = combine_features(train)
 
-    train_X, val_X, train_y, val_y = train_test_split(X, y, test_size=0.25, random_state=1, shuffle=True, stratify=y)
+    train_X, val_X, train_y, val_y = train_test_split(X, y, test_size=VAL_SIZE, shuffle=True, stratify=y)
 
     test_X, test_y = combine_features(test)
 

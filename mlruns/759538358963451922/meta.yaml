@@ -1,0 +1,6 @@
+artifact_location: file:///home/kamal/Downloads/onboarding/scibert-procodex/mlruns/759538358963451922
+creation_time: 1694080275314
+experiment_id: '759538358963451922'
+last_update_time: 1694080275314
+lifecycle_stage: active
+name: lightning_logs

@@ -17,7 +17,7 @@ LOG_FORMAT = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level>
 
 
 LABEL_MAPPER = {"Relevant": 1, "Not relevant": 0}
-
+VAL_SIZE = 0.2
 
 MODEL = "tinyBERT"
 
@@ -27,3 +27,7 @@ EPOCHS = 10
 TOKENS_MAX_LENGTH = 512
 LEARNING_RATE = 2e-5
 WEIGHT_DECAY = 0.01
+
+
+def concatenation_strategy(x):
+    return "[SEP]".join(x)
