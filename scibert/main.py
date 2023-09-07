@@ -37,9 +37,7 @@ class ProcodexDataModule(L.LightningDataModule):
         self.batch_size = batch_size
 
     def generate_model_inputs(self, X: np.ndarray, y: np.ndarray) -> list:
-        input_ids = []
-        attention_masks = []
-        targets = []
+        input_ids, attention_masks, targets = [], [], []
 
         tokenizer = MODELS[MODEL]["tokenizer"]
 
@@ -161,17 +159,17 @@ class LightningModel(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         loss, true_labels, predicted_labels = self._shared_step(batch)
-        self.train_acc(predicted_labels, true_labels)
-
         self.log("train_loss", loss, prog_bar=True)
+
+        self.train_acc(predicted_labels, true_labels)
         self.log("train_acc", self.train_acc, prog_bar=True, on_epoch=True, on_step=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
         loss, true_labels, predicted_labels = self._shared_step(batch)
-        self.val_acc(predicted_labels, true_labels)
-
         self.log("val_loss", loss, prog_bar=True)
+
+        self.val_acc(predicted_labels, true_labels)
         self.log("val_acc", self.val_acc, prog_bar=True)
 
     def configure_optimizers(self):
@@ -182,7 +180,7 @@ class LightningModel(L.LightningModule):
 def training_pipeline() -> None:
     traindf, testdf = make(DATA, TEST_DIR)
 
-    train_X, train_y, val_X, val_y, test_X, test_y = build_features(traindf[:100], testdf[:100])
+    train_X, train_y, val_X, val_y, test_X, test_y = build_features(traindf[:-1], testdf[:-1])
 
     for object, path in zip(
         [(train_X, train_y), (val_X, val_y), (test_X, test_y)],
@@ -190,17 +188,18 @@ def training_pipeline() -> None:
     ):
         pickle_serializer(object=object, path=path, mode="save")
 
-    dm = ProcodexDataModule(batch_size=32)
+    dm = ProcodexDataModule(batch_size=BATCH_SIZE)
 
     model = MODELS[MODEL]["model"]
 
     lightining_model = LightningModel(model=model, learning_rate=LEARNING_RATE)
 
-    checkpoint_callbacks = ModelCheckpoint(save_top_k=1, mode="max", monitor="val_acc")
+    # 1. Save the best model based on maximizing the validation accuracy
+    callbacks = [ModelCheckpoint(save_top_k=1, mode="max", monitor="val_acc"), TimingCallback()]
 
     trainer = L.Trainer(
         max_epochs=EPOCHS,
-        callbacks=[checkpoint_callbacks, TimingCallback()],
+        callbacks=callbacks,
         accelerator="auto",
         devices="auto",
         log_every_n_steps=5,
@@ -211,6 +210,8 @@ def training_pipeline() -> None:
     trainer.fit(model=lightining_model, datamodule=dm)
 
     trainer.save_checkpoint(Path(CKPTH_DIR, "lightning.pt"))
+
+    # trainer.test(model=lightining_model, datamodule=dm, ckpt_path="best")
 
     logger.info("Training complete!")
 

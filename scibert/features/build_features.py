@@ -29,6 +29,18 @@ def combine_features(df: pd.DataFrame) -> np.ndarray:
     return X.values, y.values
 
 
+def zero_rule_baseline(l):
+    counts = {}
+    for x in l:
+        if x not in counts:
+            counts[x] = 1
+        else:
+            counts[x] += 1
+
+    max_label = max(counts, key=lambda k: counts.get(k))
+    return counts, counts[max_label] / len(l)
+
+
 def build_features(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
     """Build training and testing features from train and test dataframes individually,
     Features are combined text from individual columns for the given dataframes
@@ -47,14 +59,15 @@ def build_features(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
 
     test_X, test_y = combine_features(test)
 
+    print(f"Train: {train_X.shape, train_y.shape}, Distribution: {zero_rule_baseline(train_y)}")
+
+    print(f"Validation: {val_X.shape, val_y.shape}, Distribution: {zero_rule_baseline(val_y)}")
+    print(f"Test: {test_X.shape, test_y.shape}, Distribution: {zero_rule_baseline(test_y)}")
+
     return train_X, train_y, val_X, val_y, test_X, test_y
 
 
 if __name__ == "__main__":
     # import training and testing dataframes
     train, test = make(DATA, TEST_DIR)
-    train_X, train_y, test_X, test_y = build_features(train, test)
-    print(train_X.shape, train_y.shape)
-    print(test_X.shape, test_y.shape)
-
-    print(train_X.ndim, type(train_X) == np.ndarray)
+    train_X, train_y, val_X, val_y, test_X, test_y = build_features(train, test)

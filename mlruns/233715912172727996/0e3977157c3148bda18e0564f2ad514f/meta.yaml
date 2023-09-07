@@ -1,0 +1,15 @@
+artifact_uri: file:///home/kamal/Downloads/onboarding/scibert-procodex/mlruns/233715912172727996/0e3977157c3148bda18e0564f2ad514f/artifacts
+end_time: 1694080912128
+entry_point_name: ''
+experiment_id: '233715912172727996'
+lifecycle_stage: active
+run_id: 0e3977157c3148bda18e0564f2ad514f
+run_name: awesome-finch-89
+run_uuid: 0e3977157c3148bda18e0564f2ad514f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1694080797859
+status: 4
+tags: []
+user_id: kamal
