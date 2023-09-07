@@ -8,6 +8,7 @@ class CustomBERTModel(torch.nn.Module):
         self.model = model
         self.hidden_dim = hidden_dim
 
+        # nn.GELU, nn.SiLU, nn.Mish
         self.all_layers = torch.nn.Sequential(
             torch.nn.Linear(self.hidden_dim, 64),
             torch.nn.ReLU(),
@@ -26,8 +27,9 @@ class CustomBERTModel(torch.nn.Module):
             token_type_ids=None,
             attention_mask=attention_masks,
         )
+        cls = outputs[0][:, 0, :]
 
-        x = self.all_layers(outputs[0][:, 0, :])
+        x = self.all_layers(cls)
 
         return x
 
