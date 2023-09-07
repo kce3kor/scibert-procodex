@@ -7,6 +7,7 @@ import torch
 import torch.nn.functional as F
 import torchmetrics
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+from lightning.pytorch.cli import LightningCLI
 from lightning.pytorch.loggers import MLFlowLogger
 from lightning.pytorch.tuner import Tuner
 from torch.utils.data import DataLoader, TensorDataset
@@ -272,6 +273,8 @@ def evaluation_pipeline(best_model):
 
 def main():
     initialize(SEED)
+
+    # Unit 6 Lecture 14
 
     best_model = training_pipeline()
 
