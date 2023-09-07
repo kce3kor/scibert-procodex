@@ -7,14 +7,18 @@ class CustomBERTModel(torch.nn.Module):
 
         self.model = model
         self.hidden_dim = hidden_dim
-        self.linear1 = torch.nn.Linear(self.hidden_dim, 64)
-        self.linear2 = torch.nn.Linear(64, 32)
-        self.linear3 = torch.nn.Linear(32, 2)
-        self.dropout = torch.nn.Dropout(0.3)
-        self.tanh = torch.nn.Tanh()
-        self.relu = torch.nn.ReLU()
 
-        self.softmax = torch.nn.Softmax(dim=1)
+        self.all_layers = torch.nn.Sequential(
+            torch.nn.Linear(self.hidden_dim, 64),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(64, 32),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(32, 2),
+            torch.nn.Sigmoid(),
+            torch.nn.Softmax(dim=1),
+        )
 
     def forward(self, input_ids, attention_masks):
         outputs = self.model(
@@ -23,18 +27,7 @@ class CustomBERTModel(torch.nn.Module):
             attention_mask=attention_masks,
         )
 
-        x = self.linear1(outputs[0][:, 0, :])
-        x = self.relu(x)
-        x = self.dropout(x)
-
-        x = self.linear2(x)
-        x = self.relu(x)
-        x = self.dropout(x)
-
-        x = self.linear3(x)
-        x = torch.sigmoid(x)
-
-        x = self.softmax(x)
+        x = self.all_layers(outputs[0][:, 0, :])
 
         return x
 

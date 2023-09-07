@@ -1,14 +1,14 @@
 import os
 import random
-from pathlib import Path
 
 import lightning as L
 import numpy as np
 import torch
 import torch.nn.functional as F
 import torchmetrics
-from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
+from lightning.pytorch.tuner import Tuner
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
@@ -173,14 +173,34 @@ class LightningModel(L.LightningModule):
         self.log("val_acc", self.val_acc, prog_bar=True)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate)
-        return optimizer
+        ## SGD
+        # optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, momentum=0.9)
+
+        ## Adam
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+
+        # TYPES OF SCHEDULERS: StepLR, Reduce-on-plateau , Cosine Annealing
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+        ## step_size = epochs, so we are reducing by 0.5 in every 10 epochs
+
+        # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, factor=0.1, mode="max")
+        ## If there is no improvement in 5 epochs, reduce it by 10%, track the improvement using val_acc with "max", for train_acc == "min"
+
+        # num_steps = EPOCHS*len(dm.train_dataloader()), load num_steps from outside the class
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_steps)
+        ## Reduce the lr in a cosine format
+        ## set the interval as STEP
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {"scheduler": scheduler, "monitor": "train_loss", "interval": "step", "frequency": 1},
+        }
 
 
 def training_pipeline() -> None:
     traindf, testdf = make(DATA, TEST_DIR)
 
-    train_X, train_y, val_X, val_y, test_X, test_y = build_features(traindf[:-1], testdf[:-1])
+    train_X, train_y, val_X, val_y, test_X, test_y = build_features(traindf[:50], testdf[:50])
 
     for object, path in zip(
         [(train_X, train_y), (val_X, val_y), (test_X, test_y)],
@@ -195,7 +215,11 @@ def training_pipeline() -> None:
     lightining_model = LightningModel(model=model, learning_rate=LEARNING_RATE)
 
     # 1. Save the best model based on maximizing the validation accuracy
-    callbacks = [ModelCheckpoint(save_top_k=1, mode="max", monitor="val_acc"), TimingCallback()]
+    callbacks = [
+        ModelCheckpoint(save_top_k=1, mode="max", monitor="val_acc"),
+        TimingCallback(),
+        EarlyStopping(monitor="val_loss", mode="min"),
+    ]
 
     trainer = L.Trainer(
         max_epochs=EPOCHS,
@@ -206,20 +230,22 @@ def training_pipeline() -> None:
         deterministic=True,
         logger=MLFlowLogger(),
     )
+    tuner = Tuner(trainer)
+
+    lightining_model.learning_rate = tuner.lr_find(lightining_model, datamodule=dm).suggestion()
 
     trainer.fit(model=lightining_model, datamodule=dm)
-
-    trainer.save_checkpoint(Path(CKPTH_DIR, "lightning.pt"))
+    logger.info("Training complete!")
 
     # trainer.test(model=lightining_model, datamodule=dm, ckpt_path="best")
 
-    logger.info("Training complete!")
+    return trainer.checkpoint_callback.best_model_path
 
 
-def evaluation_pipeline():
+def evaluation_pipeline(best_model):
     model = MODELS[MODEL]["model"]
 
-    lightining_model = LightningModel.load_from_checkpoint(Path(CKPTH_DIR, "lightning.pt"), model=model)
+    lightining_model = LightningModel.load_from_checkpoint(best_model, model=model)
 
     dm = ProcodexDataModule()
     dm.setup("test")
@@ -247,9 +273,9 @@ def evaluation_pipeline():
 def main():
     initialize(SEED)
 
-    training_pipeline()
+    best_model = training_pipeline()
 
-    evaluation_pipeline()
+    evaluation_pipeline(best_model)
 
 
 if __name__ == "__main__":
