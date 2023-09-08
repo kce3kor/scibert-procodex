@@ -16,15 +16,6 @@ from scibert.preprocessing.make_data import (
 from scibert.utils.logger import logger
 
 
-def initialize(seed: int) -> str:
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.backends.cudnn.derterministic = True
-    torch.cuda.manual_seed_all(seed)
-
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-
 def load_model(ckpth: str) -> AutoModel:
     """Model serializer based on the checkpoint
 
@@ -93,7 +84,10 @@ def inference(query: dict) -> str:
 
     lightining_model = load_model(Path(CKPTH_DIR, "lightning.pt"))
 
-    with torch.no_grad():
+    torch.set_grad_enabled(False)
+    lightining_model.eval()
+
+    with torch.inference_mode():
         logits = lightining_model(ids, masks)
 
     label = torch.argmax(logits, dim=1)
@@ -103,7 +97,11 @@ def inference(query: dict) -> str:
 
 
 if __name__ == "__main__":
-    initialize(SEED)
+    random.seed(SEED)
+    torch.manual_seed(SEED)
+    torch.backends.cudnn.derterministic = True
+    torch.cuda.manual_seed_all(SEED)
+
     query = {
         "title": "This is the title",
         "keywords": "this;is;the;keywords",

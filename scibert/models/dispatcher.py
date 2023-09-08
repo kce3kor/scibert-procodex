@@ -1,20 +1,20 @@
 from transformers import AutoModel, AutoTokenizer
+
 from scibert.models.network import CustomBERTModel
 
 MODELS = {
     "scibert": {
         "model": CustomBERTModel(
-            AutoModel.from_pretrained(
-                "allenai/scibert_scivocab_uncased", output_hidden_states=True
-            ),
+            model=AutoModel.from_pretrained("allenai/scibert_scivocab_uncased", output_hidden_states=True),
             hidden_dim=128,
         ),
         "tokenizer": AutoTokenizer.from_pretrained("allenai/scibert_scivocab_uncased"),
     },
     "tinyBERT": {
         "model": CustomBERTModel(
-            AutoModel.from_pretrained("prajjwal1/bert-tiny", output_hidden_states=True),
+            model=AutoModel.from_pretrained("prajjwal1/bert-tiny", output_hidden_states=True),
             hidden_dim=128,
+            hidden_units=[64, 32, 16],
         ),
         "tokenizer": AutoTokenizer.from_pretrained("prajjwal1/bert-tiny"),
     },
