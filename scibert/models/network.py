@@ -28,16 +28,16 @@ class CustomBERTModel(torch.nn.Module):
             # Put batch norm before activation function
             # But putting it after activation function is also fine
             all_layers.append(torch.nn.BatchNorm1d(hidden_unit))
-            all_layers.append(torch.nn.ReLU())
+            all_layers.append(torch.nn.Tanh())
 
             # Put dropout after activation
-            all_layers.append(torch.nn.Dropout(0.3))
+            all_layers.append(torch.nn.Dropout(0.5))
 
             hidden_dim = hidden_unit
 
         all_layers.append(torch.nn.Linear(hidden_units[-1], 2))
         all_layers.append(torch.nn.Sigmoid())
-        all_layers.append(torch.nn.Softmax(dim=1))
+        # all_layers.append(torch.nn.Softmax(dim=1))
 
         self.all_layers = torch.nn.Sequential(*all_layers)
 

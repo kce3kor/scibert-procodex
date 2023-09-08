@@ -61,13 +61,14 @@ class LightningModel(L.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
         # TYPES OF SCHEDULERS: StepLR, Reduce-on-plateau , Cosine Annealing
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.5)
         ## step_size = epochs, so we are reducing by 0.5 in every 10 epochs
 
         # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, factor=0.1, mode="max")
         ## If there is no improvement in 5 epochs, reduce it by 10%, track the improvement using val_acc with "max", for train_acc == "min"
 
-        # num_steps = EPOCHS*len(dm.train_dataloader()), load num_steps from outside the class
+        # num_steps = (EPOCHS * len(dm.train_dataloader()),)
+        # load num_steps from outside the class
         # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_steps)
         ## Reduce the lr in a cosine format
         ## set the interval as STEP

@@ -23,7 +23,7 @@ from scibert.utils.utils import TimingCallback
 def training_pipeline(epochs=EPOCHS, batch_size=BATCH_SIZE, learning_rate=LEARNING_RATE):
     traindf, testdf = make(DATA, TEST_DIR)
 
-    train_X, train_y, val_X, val_y, test_X, test_y = build_features(traindf[:50], testdf[:50])
+    train_X, train_y, val_X, val_y, test_X, test_y = build_features(traindf[:-1], testdf[:-1])
 
     for object, path in zip(
         [(train_X, train_y), (val_X, val_y), (test_X, test_y)],
@@ -45,15 +45,15 @@ def training_pipeline(epochs=EPOCHS, batch_size=BATCH_SIZE, learning_rate=LEARNI
 
     # 1. Save the best model based on maximizing the validation accuracy
     callbacks = [
-        ModelCheckpoint(save_top_k=1, mode="max", monitor="val_acc"),
+        ModelCheckpoint(save_top_k=2, mode="max", monitor="val_acc"),
         TimingCallback(),
-        EarlyStopping(monitor="val_loss", mode="min"),
+        # EarlyStopping(monitor="val_acc", mode="max"),
     ]
 
     # Overfitting to minibatch is a sanity check that assumes:
     # A good model should always be able to fit one minibatch with very high train accuracy, If the model cant fit
     trainer = L.Trainer(
-        overfit_batches=1,
+        # overfit_batches=1,
         max_epochs=epochs,
         callbacks=callbacks,
         accelerator="auto",
@@ -62,8 +62,9 @@ def training_pipeline(epochs=EPOCHS, batch_size=BATCH_SIZE, learning_rate=LEARNI
         deterministic=True,
         logger=MLFlowLogger(),
     )
-    tuner = Tuner(trainer)
 
+    # Using tuner to determine the appropriate learning rates
+    tuner = Tuner(trainer)
     lightining_model.learning_rate = tuner.lr_find(lightining_model, datamodule=dm).suggestion()
 
     trainer.fit(model=lightining_model, datamodule=dm)
